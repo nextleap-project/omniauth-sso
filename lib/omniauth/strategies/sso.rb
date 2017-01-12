@@ -21,7 +21,7 @@ module OmniAuth
       end
 
       info do
-        info_from_ticket.slice *options.fields
+        info_from_ticket.select{|key,_val| options.fields.include? key}
       end
 
       def authorize_url(_params_from_options)
@@ -30,7 +30,7 @@ module OmniAuth
       end
 
       def name
-        'ai_sso'
+        'sso'
       end
 
       def info_from_ticket
