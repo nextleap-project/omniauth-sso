@@ -16,5 +16,8 @@ before_script:
   - bundle install -j $(nproc) --path vendor  # Install dependencies into ./vendor/ruby
 
 test:
-  script:
-  - bundle exec rake test
+  script: bundle exec rake test
+  artifacts:
+    paths:
+      - coverage/
+
