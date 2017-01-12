@@ -8,7 +8,16 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
   include Rack::Test::Methods
 
   def strategy
-    [OmniAuth::Strategies::SSO, 'service_id', verify_key]
+    [OmniAuth::Strategies::SSO, 'my_service_id', verify_key]
+  end
+
+  def test_redirect
+    get 'auth/sso'
+    assert last_response.redirect?
+    assert_includes last_response.location,
+      'https://neststaging.riseup.net/sso_auth'
+    assert_includes last_response.location,
+      's=my_service_id'
   end
 
   def test_callback

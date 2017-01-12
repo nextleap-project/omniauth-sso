@@ -1,5 +1,6 @@
 require 'omniauth'
 require 'rbsso/client'
+require 'cgi'
 
 module OmniAuth
   module Strategies
@@ -25,8 +26,11 @@ module OmniAuth
       end
 
       def authorize_url(_params_from_options)
-        params = { s: options.service_id }
-        "https://#{SSO_URL}/?" + params.to_param
+        "https://#{SSO_URL}/?s=#{service_param}"
+      end
+
+      def service_param
+        CGI.escape options.service_id
       end
 
       def name
