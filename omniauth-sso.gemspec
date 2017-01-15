@@ -11,7 +11,7 @@ Omniauth strategy for "ai's sso"(https://git.autistici.org/ai/sso) based on rbss
   s.homepage    = 'https://0xacab.org/riseup/omniauth-sso'
 
   s.add_runtime_dependency 'omniauth', '~> 1.3'
-  s.add_runtime_dependency 'rbsso', '~> 0.1'
+  s.add_runtime_dependency 'rbsso', '~> 0.2.2'
 
   s.add_development_dependency 'rake', '>= 10', '< 13'
   s.add_development_dependency 'minitest', '~>5.0'

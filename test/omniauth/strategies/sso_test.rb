@@ -1,14 +1,20 @@
 require 'test_helper'
 require 'omniauth'
+require 'logger'
 require 'rack/test'
 require 'omniauth/strategies/sso'
+require 'rbsso'
 
 class OmniAuth::Strategies::SSOTest < Minitest::Test
   include OmniAuth::Test::StrategyTestCase
   include Rack::Test::Methods
 
+  def setup
+    OmniAuth.config.logger = Logger.new '/dev/null'
+  end
+
   def strategy
-    [OmniAuth::Strategies::SSO, 'my_service_id', verify_key]
+    [OmniAuth::Strategies::SSO, 'https://my.service.id/', verify_key]
   end
 
   def test_redirect
@@ -17,20 +23,34 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
     assert_includes last_response.location,
       'https://neststaging.riseup.net/sso_auth'
     assert_includes last_response.location,
-      's=my_service_id'
+      "s=#{CGI.escape(service)}"
   end
 
-  def test_callback
-    post '/auth/sso/callback', t: ticket_string
+  def test_valid_ticket
+    post '/auth/sso/callback', t: ticket
     assert auth_hash
     assert_equal 'sso', auth_hash['provider']
-    assert_equal 'ale@sso.net', auth_hash['uid']
-    assert_equal 'ale@sso.net', auth_hash['info'].email
-    assert_equal 'ale', auth_hash['info'].name
+    assert_equal 'user@domain', auth_hash['uid']
+    assert_equal 'user@domain', auth_hash['info'].email
+    assert_equal 'user', auth_hash['info'].name
   end
 
-  def test_invalid_callback
-    post '/auth/my_strategy/callback', t: invalid_ticket_string
+  def test_expired_ticket
+    assert_raises RuntimeError do
+      post '/auth/sso/callback', t: expired_ticket
+    end
+    assert_nil auth_hash
+  end
+
+  def test_invalid_ticket
+    post '/auth/my_strategy/callback', t: invalid_ticket
+    assert_nil auth_hash
+  end
+
+  def test_wrong_service
+    assert_raises RuntimeError do
+      post '/auth/sso/callback', t: server.ticket(user, 'other_service', domain)
+    end
     assert_nil auth_hash
   end
 
@@ -38,15 +58,32 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
     last_request.env['omniauth.auth']
   end
 
+  def expired_ticket
+    Time.stub :now, Time.at(123456) do
+      ticket
+    end
+  end
+
+  # We modify the content of the ticket so the signature becomes invalid.
+  # It still should have the right length and be Base64 compatible.
+  def invalid_ticket
+    ticket.tap do |string|
+      string[100..112] = '///invalid///'
+    end
+  end
+
   def verify_key
-    'c0dadbb483765b055d4f9ff5554d92b3ed7a433f15f4d8ebabbbd072510bfe23'
+    server.verify_key
   end
 
-  def ticket_string
-    '4bHHseETK5U9YblImiqUpPHnEktAHIlICzb8w6jfrcrDyj/y7EtWoFVTvmTPcpJKHdh7TPPYgEVHVFH4DwKsCDN8YWxlfHNlcnZpY2UvfHNzby5uZXR8MTQxNTU3NDg0NHw='
+  def ticket
+    server.ticket(user, service, domain)
   end
 
-  def invalid_ticket_string
-    '4bHHseETK5U9YblImiqUpPHnEktAHIlICzb8w6jfrcrDyj/y7EtWoFVTvmTPcpJKHdh7TPPYgEVHVFH4DwKsCDN8YWxlfHNlcnZpY2UvfHNzby5invalidQxNTU3NDg1NHw='
-  end
+  def server; RbSSO::Server.new seed; end
+  def seed; '1234567890ABCDEF' * 4; end
+  def user; 'user'; end
+  def service; 'https://my.service.id/'; end
+  def domain; 'domain'; end
+
 end

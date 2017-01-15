@@ -42,7 +42,7 @@ module OmniAuth
       end
 
       def client
-        RbSSO::Client.new options.client_key
+        RbSSO::Client.new options.service_id, options.client_key
       end
     end
   end
