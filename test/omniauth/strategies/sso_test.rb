@@ -49,7 +49,7 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
 
   def test_wrong_service
     assert_raises RuntimeError do
-      post '/auth/sso/callback', t: server.ticket(user, 'other_service', domain)
+      post '/auth/sso/callback', t: ticket_for_other_service
     end
     assert_nil auth_hash
   end
@@ -62,6 +62,10 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
     Time.stub :now, Time.at(123456) do
       ticket
     end
+  end
+
+  def ticket_for_other_service
+    server.ticket user: user, service: 'other_service', domain: domain
   end
 
   # We modify the content of the ticket so the signature becomes invalid.
@@ -77,7 +81,7 @@ class OmniAuth::Strategies::SSOTest < Minitest::Test
   end
 
   def ticket
-    server.ticket(user, service, domain)
+    server.ticket(user: user, service: service, domain: domain)
   end
 
   def server; RbSSO::Server.new seed; end
